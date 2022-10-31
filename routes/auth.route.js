@@ -1,26 +1,13 @@
-import express from "express"
+import { Router } from "express"
 import { login, register } from "../controllers/auth.controller.js"
-import { body } from "express-validator"
+import { ValidationRegister } from "../validations/auth.validation.js"
+import { ValidationLogin } from "../validations/auth.validation.js"
 import { validationResultExpress } from "../middlewares/validationResultExpress.js"
 
-const router = express.Router()
+const router = Router()
 
-router.post("/register", [
-    body('email', "Formato de email incorrecto")
-        .trim()
-        .isEmail()
-        .normalizeEmail(),
-    body('password', "Password debe tener minimo 6 caracteres")
-        .trim()
-        .isLength({ min: 6 }),
-    body('password', "formato de password incorrecto")
-        .custom((value, { req }) => { //value es el valor de body, en este caso password
-            if (value != req.body.repassword) {
-                throw new Error("Las contraseñas no coinsiden")
-            }
-            return value
-        })
-], validationResultExpress, register)
-router.post("/login", login)
+router.post("/register", ValidationRegister, validationResultExpress, register)
+
+router.post("/login", ValidationLogin, validationResultExpress, login)
 
 export default router

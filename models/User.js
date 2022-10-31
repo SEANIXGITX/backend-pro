@@ -1,7 +1,9 @@
 import mongoose from "mongoose";
-const { Schema, model } = mongoose
+import bcryptjs from "bcryptjs"
 
-const userSchema = new Schema({
+// const { Schema, model } = mongoose
+
+const userSchema = new mongoose.Schema({
     email: {
         type: String,
         required: true,
@@ -10,10 +12,31 @@ const userSchema = new Schema({
         lowercase: true,
         index: { unique: true }
     },
-    password:{
+    password: {
         type: String,
         required: true,
     }
 })
 
-const User = model("user",userSchema)
+// interseptar los datos antes de gravarlos con el metodo pre() capturando el evento save
+userSchema.pre("save", async function (next) {
+    // obteniendo datos del schema
+    const user = this
+    // si se modifica otro dato diferente del password entonces pasa a guardar cambios
+    if (!user.isModified("password")) return next()
+
+    try {
+        const salt = await bcryptjs.genSalt(10)
+        user.password = await bcryptjs.hash(user.password, salt)
+        next()
+    } catch (error) {
+        console.log(error)
+        throw new Error("Fallo el hash de contraseña")
+    }
+})
+
+userSchema.methods.comparePassword = async function (frontendPassword) {
+    return await bcryptjs.compare(frontendPassword, this.password)
+}
+
+export const User = mongoose.model("User", userSchema)
