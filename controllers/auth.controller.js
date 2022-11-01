@@ -1,5 +1,6 @@
 import { User } from "../models/User.js"
 import jwt from "jsonwebtoken"
+import { generateRefreshToken, generateToken } from "../util/tokenManager.js"
 
 export const register = async (req, res) => {
     console.log(req.body)
@@ -33,11 +34,53 @@ export const login = async (req, res) => {
         if (!respuestaPassword)
             return res.status(403).json({ error: "Contraseña incorrecta" })
         // Genera token jwt
-        const token = jwt.sign({ uid: user._id }, process.env.JWT_SECRET)
+        const { token, expiresIn } = generateToken(user._id)
 
-        res.json({ token })
+        generateRefreshToken(user._id, res)
+
+        return res.json({ token, expiresIn })
     } catch (error) {
         console.log(error)
         return res.status(500).json({ error: "Error de servidor" })
     }
+}
+
+export const infoUser = async (req, res) => {
+    try {
+        const user = await User.findById(req.uid).lean()
+        return res.json({ uid: user._id, email: user.email })
+    } catch (error) {
+        return res.status(500).json({ error: "error de servidor" })
+    }
+}
+// refresh controller
+export const refreshToken = (req, res) => {
+    try {
+        const refreshTokenCookie = req.cookies.refreshToken
+        if (!refreshTokenCookie)
+            throw new Error("No Token")
+
+        const { uid } = jwt.verify(refreshTokenCookie, process.env.JWT_REFRESH) //jwt.verify contiene la informacion uid, iat, exp
+        const { token, expiresIn } = generateToken(uid)
+
+        return res.json({ token, expiresIn })
+
+    } catch (error) {
+        console.log(error.message)
+
+        const tokenVerificationErrors = {
+            "invalid signature": "La escritura del token es incorrecta",
+            "jwt malformed": "JWT no es un token",
+            "jwt expired": "JWT token expirado",
+            "invalid token": "Token no válido",
+            "No Token": "No se ha enviado token, utiliza formato Bearer"
+        }
+
+        return res.status(401).send({ error: tokenVerificationErrors[error.message] })
+    }
+}
+
+export const logout = (req, res) => {
+    res.clearCookie('refreshToken')
+    res.json({ ok: true })
 }
