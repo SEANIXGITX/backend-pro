@@ -1,7 +1,7 @@
 import { Router } from "express";
-import { createLink, getLink, getLinks, removeLink } from "../controllers/link.controller.js";
+import { createLink, getLink, getLinkCRUD, getLinks, removeLink, updateLink } from "../controllers/link.controller.js";
 import { requireToken } from "../middlewares/requireToken.js";
-import { ValidationCreateLink } from "../middlewares/validatorManager.js";
+import { ValidationCreateLink, ValidationParamLink } from "../middlewares/validatorManager.js";
 const router = Router()
 
 // GET      /api/v1/links/       all links
@@ -11,8 +11,10 @@ const router = Router()
 // DELETE   /api/v1/links/:id    remove link
 
 router.get("/", requireToken, getLinks)
-router.get("/:id", requireToken, getLink)
+router.get("/:nanoLink", getLink)
+// router.get("/:id", requireToken, getLinkCRUD)
 router.post("/", requireToken, ValidationCreateLink, createLink)
-router.delete("/:id", requireToken, removeLink)
+router.patch("/:id", requireToken, ValidationParamLink, updateLink) // PATCH solo actualiza un campo PUT actualizaz varios campos
+router.delete("/:id", requireToken, ValidationParamLink, ValidationCreateLink, removeLink)
 
 export default router

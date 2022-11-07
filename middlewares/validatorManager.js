@@ -1,5 +1,5 @@
 import { validationResult } from "express-validator"
-import { body } from "express-validator"
+import { body, param } from "express-validator"
 import axios from "axios"
 
 export const validationResultExpress = (req, res, next) => {
@@ -60,4 +60,12 @@ export const ValidationCreateLink = [
             }
         }),  // validamos con aaxios para saber si longLink es link real
     validationResultExpress
+]
+
+export const ValidationParamLink = [
+    param("id", "Formato no valido (Express-validation)")
+        .trim()
+        .notEmpty()
+        .escape()   //limpia el param de alguna cadedna extraña
+    , validationResultExpress
 ]
