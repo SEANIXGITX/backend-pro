@@ -1,6 +1,5 @@
 import { User } from "../models/User.js"
-import jwt from "jsonwebtoken"
-import { generateRefreshToken, generateToken } from "../util/tokenManager.js"
+import { generateRefreshToken, generateToken, tokenVerificationErrors } from "../util/tokenManager.js"
 
 export const register = async (req, res) => {
     console.log(req.body)
@@ -12,8 +11,13 @@ export const register = async (req, res) => {
 
         user = new User({ email, password })
         await user.save()
-        // jwt
-        return res.status(201).json({ register: true })
+        // genera token jwt
+        const { token, expiresIn } = generateToken(user._id)
+
+        generateRefreshToken(user._id, res)
+
+
+        return res.status(201).json({ token, expiresIn })
     } catch (error) {
         console.log(error)
         if (error.code == 11000) {
@@ -39,6 +43,7 @@ export const login = async (req, res) => {
         generateRefreshToken(user._id, res)
 
         return res.json({ token, expiresIn })
+        // return res.json({ ok: true })
     } catch (error) {
         console.log(error)
         return res.status(500).json({ error: "Error de servidor" })
@@ -56,27 +61,11 @@ export const infoUser = async (req, res) => {
 // refresh controller
 export const refreshToken = (req, res) => {
     try {
-        const refreshTokenCookie = req.cookies.refreshToken
-        if (!refreshTokenCookie)
-            throw new Error("No Token")
-
-        const { uid } = jwt.verify(refreshTokenCookie, process.env.JWT_REFRESH) //jwt.verify contiene la informacion uid, iat, exp
-        const { token, expiresIn } = generateToken(uid)
-
+        const { token, expiresIn } = generateToken(req.uid)
         return res.json({ token, expiresIn })
-
     } catch (error) {
-        console.log(error.message)
-
-        const tokenVerificationErrors = {
-            "invalid signature": "La escritura del token es incorrecta",
-            "jwt malformed": "JWT no es un token",
-            "jwt expired": "JWT token expirado",
-            "invalid token": "Token no válido",
-            "No Token": "No se ha enviado token, utiliza formato Bearer"
-        }
-
-        return res.status(401).send({ error: tokenVerificationErrors[error.message] })
+        console.log(error)
+        return res.status(500).json({ error: "error de servidor" })
     }
 }
 
